@@ -1,14 +1,10 @@
-import json
+import data_fetcher
+
+TEMPLATE_FILE = "animals_template.html"
+OUTPUT_FILE = "animals.html"
 
 
-def load_data(file_path):
-    """Load and return JSON data from animals_data.json."""
-    with open(file_path, "r", encoding="utf-8") as handle:
-        return json.load(handle)
-
-
-def serialize_animal(animal):
-    """Convert one animal dictionary into one HTML <li> card string."""
+def serialize_animal(animal: dict) -> str:
     parts = []
     parts.append('<li class="cards__item">')
 
@@ -18,13 +14,13 @@ def serialize_animal(animal):
 
     parts.append('<p class="card__text">')
 
-    characteristics = animal.get("characteristics", {})
+    characteristics = animal.get("characteristics") or {}
 
     diet = characteristics.get("diet")
     if diet:
         parts.append(f"<strong>Diet:</strong> {diet}<br/>")
 
-    locations = animal.get("locations", [])
+    locations = animal.get("locations") or []
     if locations:
         parts.append(f"<strong>Location:</strong> {locations[0]}<br/>")
 
@@ -38,30 +34,38 @@ def serialize_animal(animal):
     return "\n".join(parts)
 
 
+def build_animals_info(animals: list) -> str:
+    return "\n".join(serialize_animal(a) for a in animals) + ("\n" if animals else "")
 
-def build_animals_info(data):
-    """Building one HTML string that contains all the animal cards."""
-    animals_info = ""
-    for animal in data:
-        animals_info += serialize_animal(animal) + "\n"
-    return animals_info
+
+def build_not_found_message(animal_name: str) -> str:
+    safe = animal_name.replace('"', "&quot;")
+    return f'<h2>The animal "{safe}" doesn\'t exist.</h2>'
+
+
+def generate_html(content_html: str) -> None:
+    with open(TEMPLATE_FILE, "r", encoding="utf-8") as f:
+        template = f.read()
+
+    final_html = template.replace("__REPLACE_ANIMALS_INFO__", content_html)
+
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        f.write(final_html)
 
 
 def main():
-    data = load_data("animals_data.json")
+    animal_name = input("Enter a name of an animal: ").strip()
 
-    animals_info = build_animals_info(data)
+    animals = data_fetcher.fetch_data(animal_name)
 
-    with open("animals_template.html", "r", encoding="utf-8") as f:
-        template = f.read()
+    if animals:
+        animals_html = build_animals_info(animals)
+    else:
+        animals_html = build_not_found_message(animal_name)
 
-    final_html = template.replace("__REPLACE_ANIMALS_INFO__", animals_info)
-
-    with open("animals.html", "w", encoding="utf-8") as f:
-        f.write(final_html)
+    generate_html(animals_html)
+    print(f"Website was successfully generated to the file {OUTPUT_FILE}.")
 
 
 if __name__ == "__main__":
     main()
-
-
